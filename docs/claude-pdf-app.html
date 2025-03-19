@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to CSV Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        .tooltip {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 2px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .drop-area {
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #ecf0f1;
+            transition: background-color 0.3s;
+        }
+        .drop-area.highlight {
+            background-color: #d6eaf8;
+        }
+        .file-list {
+            margin-bottom: 20px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        .remove-file {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .progress-container {
+            margin-top: 20px;
+        }
+        progress {
+            width: 100%;
+            height: 20px;
+            margin-bottom: 10px;
+        }
+        .status {
+            text-align: center;
+            font-weight: bold;
+        }
+        #csvOptions {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .option-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        label {
+            font-weight: bold;
+        }
+        select, input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 60%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF to CSV Converter</h1>
+        
+        <div class="drop-area" id="dropArea">
+            <p>Drag & drop PDF files here or click to select</p>
+            <input type="file" id="fileInput" multiple accept=".pdf" style="display: none;">
+        </div>
+        
+        <div class="file-list" id="fileList"></div>
+        
+        <div id="csvOptions">
+            <h3>CSV Options</h3>
+            <div class="option-row">
+                <label for="textProcessing">Text Processing:</label>
+                <select id="textProcessing">
+                    <option value="paragraphs">Extract Paragraphs</option>
+                    <option value="lines">Extract Lines</option>
+                    <option value="full">Full Text (One Entry Per PDF)</option>
+                </select>
+            </div>
+            <div class="option-row">
+                <label for="includeFilename">Include Filename:</label>
+                <input type="checkbox" id="includeFilename" checked>
+            </div>
+            <div class="option-row">
+                <label for="includePageNum">Include Page Numbers:</label>
+                <input type="checkbox" id="includePageNum" checked>
+            </div>
+            <div class="option-row">
+                <label for="customDelimiter">Custom Line Delimiter:</label>
+                <input type="text" id="customDelimiter" placeholder="Leave empty for default">
+            </div>
+            <div class="option-row">
+                <label for="useOcr">Use OCR for Pages Without Text:</label>
+                <input type="checkbox" id="useOcr">
+                <div class="tooltip">OCR will only be used on pages where standard text extraction finds no content</div>
+            </div>
+            <div class="option-row">
+                <label for="ocrLanguage">OCR Language:</label>
+                <select id="ocrLanguage">
+                    <option value="eng">English</option>
+                    <option value="fra">French</option>
+                    <option value="deu">German</option>
+                    <option value="spa">Spanish</option>
+                    <option value="ita">Italian</option>
+                    <option value="por">Portuguese</option>
+                    <option value="chi_sim">Chinese (Simplified)</option>
+                    <option value="jpn">Japanese</option>
+                    <option value="kor">Korean</option>
+                    <option value="ara">Arabic</option>
+                    <option value="rus">Russian</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button id="processButton" disabled>Process PDFs</button>
+            <button id="downloadButton" disabled>Download CSV</button>
+        </div>
+        
+        <div class="progress-container">
+            <progress id="progressBar" value="0" max="100"></progress>
+            <div id="status" class="status">Ready</div>
+        </div>
+    </div>
+
+    <script>
+        // Set up the PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        // DOM elements
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const processButton = document.getElementById('processButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const progressBar = document.getElementById('progressBar');
+        const statusElement = document.getElementById('status');
+        
+        // Data storage
+        let pdfFiles = [];
+        let csvData = [];
+        let processedFiles = 0;
+        
+        // Event listeners for drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.classList.add('highlight');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('highlight');
+        }
+        
+        // Handle file drop
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+        
+        // Click to select files
+        dropArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', () => {
+            handleFiles(fileInput.files);
+        });
+        
+        // Process the selected files
+        function handleFiles(files) {
+            const newFiles = [...files].filter(file => file.type === 'application/pdf');
+            
+            if (newFiles.length > 0) {
+                pdfFiles = [...pdfFiles, ...newFiles];
+                updateFileList();
+                processButton.disabled = false;
+            }
+        }
+        
+        // Update the file list display
+        function updateFileList() {
+            fileList.innerHTML = '';
+            
+            pdfFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileName = document.createElement('span');
+                fileName.textContent = file.name;
+                
+                const removeButton = document.createElement('button');
+                removeButton.className = 'remove-file';
+                removeButton.textContent = 'Remove';
+                removeButton.addEventListener('click', () => {
+                    pdfFiles.splice(index, 1);
+                    updateFileList();
+                    if (pdfFiles.length === 0) {
+                        processButton.disabled = true;
+                    }
+                });
+                
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(removeButton);
+                fileList.appendChild(fileItem);
+            });
+        }
+        
+        // Process button click
+        processButton.addEventListener('click', async () => {
+            if (pdfFiles.length === 0) return;
+            
+            // Check if Tesseract is needed
+            const useOcr = document.getElementById('useOcr').checked;
+            if (useOcr) {
+                statusElement.textContent = 'OCR enabled. Starting processing...';
+                // No need to initialize - Tesseract.js 4.x initializes automatically
+            }
+            
+            // Reset data and UI
+            csvData = [];
+            processedFiles = 0;
+            progressBar.value = 0;
+            statusElement.textContent = 'Processing PDFs...';
+            downloadButton.disabled = true;
+            processButton.disabled = true;
+            
+            // Get options
+            const textProcessing = document.getElementById('textProcessing').value;
+            const includeFilename = document.getElementById('includeFilename').checked;
+            const includePageNum = document.getElementById('includePageNum').checked;
+            const customDelimiter = document.getElementById('customDelimiter').value;
+            
+            // Set up CSV headers
+            const headers = [];
+            if (includeFilename) headers.push('Filename');
+            if (includePageNum) headers.push('Page');
+            headers.push('Content');
+            
+            csvData.push(headers);
+            
+            // Process each PDF
+            for (let i = 0; i < pdfFiles.length; i++) {
+                try {
+                    await processFile(pdfFiles[i], textProcessing, includeFilename, includePageNum, customDelimiter);
+                    processedFiles++;
+                    progressBar.value = (processedFiles / pdfFiles.length) * 100;
+                } catch (error) {
+                    console.error(`Error processing ${pdfFiles[i].name}:`, error);
+                    statusElement.textContent = `Error processing ${pdfFiles[i].name}`;
+                }
+            }
+            
+            if (processedFiles === pdfFiles.length) {
+                statusElement.textContent = 'Processing complete! You can now download the CSV.';
+                downloadButton.disabled = false;
+            }
+            
+            processButton.disabled = false;
+        });
+        
+        // Process a single PDF file
+        async function processFile(file, textProcessing, includeFilename, includePageNum, customDelimiter) {
+            statusElement.textContent = `Processing ${file.name}...`;
+            
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const numPages = pdf.numPages;
+            
+            // Get OCR options
+            const useOcr = document.getElementById('useOcr').checked;
+            const ocrLanguage = document.getElementById('ocrLanguage').value;
+            
+            if (textProcessing === 'full') {
+                let fullText = '';
+                
+                for (let j = 1; j <= numPages; j++) {
+                    statusElement.textContent = `Processing ${file.name} - Page ${j}/${numPages}...`;
+                    
+                    // Get page text (native or OCR)
+                    const pageText = await getPageText(pdf, j, useOcr, ocrLanguage);
+                    fullText += pageText + ' ';
+                }
+                
+                const row = [];
+                if (includeFilename) row.push(file.name);
+                if (includePageNum) row.push('All');
+                row.push(fullText.trim());
+                csvData.push(row);
+            } else {
+                for (let j = 1; j <= numPages; j++) {
+                    statusElement.textContent = `Processing ${file.name} - Page ${j}/${numPages}...`;
+                    
+                    // Get page text (native or OCR)
+                    const pageText = await getPageText(pdf, j, useOcr, ocrLanguage);
+                    
+                    if (textProcessing === 'lines') {
+                        // Split text by newlines to get lines
+                        const lines = pageText.split('\n');
+                        
+                        lines.forEach(line => {
+                            const trimmedLine = line.trim();
+                            if (trimmedLine) {
+                                const row = [];
+                                if (includeFilename) row.push(file.name);
+                                if (includePageNum) row.push(j);
+                                row.push(trimmedLine);
+                                csvData.push(row);
+                            }
+                        });
+                    } else {
+                        // Extract paragraphs
+                        const delimiter = customDelimiter || '\n\n';
+                        
+                        // Split by double newlines (or custom delimiter) to get paragraphs
+                        const paragraphs = pageText.split(delimiter);
+                        
+                        paragraphs.forEach(paragraph => {
+                            const trimmedParagraph = paragraph.trim();
+                            if (trimmedParagraph) {
+                                const row = [];
+                                if (includeFilename) row.push(file.name);
+                                if (includePageNum) row.push(j);
+                                row.push(trimmedParagraph);
+                                csvData.push(row);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Function to get text from a page, either using native PDF text or OCR
+        async function getPageText(pdf, pageNum, useOcr, ocrLanguage) {
+            const page = await pdf.getPage(pageNum);
+            
+            // First try to extract text using pdf.js
+            const textContent = await page.getTextContent();
+            const extractedText = textContent.items.map(item => item.str).join(' ').trim();
+            
+            // If text was successfully extracted or OCR is disabled, return it
+            if (extractedText.length > 0 || !useOcr) {
+                return extractedText;
+            }
+            
+            // If we have no text and OCR is enabled, use OCR
+            statusElement.textContent = `No text detected on page ${pageNum}. Using OCR...`;
+            
+            // Render the page to a canvas and process with Tesseract
+            const viewport = page.getViewport({ scale: 1.5 }); // Higher scale for better OCR
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            // Render PDF page to canvas
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+            
+            // Process the canvas with Tesseract OCR
+            try {
+                const result = await Tesseract.recognize(
+                    canvas,
+                    ocrLanguage,
+                    {
+                        logger: message => {
+                            if (message.status === 'recognizing text') {
+                                const progress = Math.round(message.progress * 100);
+                                statusElement.textContent = `OCR in progress (${progress}%)...`;
+                            }
+                        }
+                    }
+                );
+                return result.data.text;
+            } catch (error) {
+                console.error('OCR error:', error);
+                statusElement.textContent = `OCR error on page ${pageNum}. Returning empty text.`;
+                return '';
+            }
+        }
+        
+        // Download button click
+        downloadButton.addEventListener('click', () => {
+            if (csvData.length === 0) return;
+            
+            const csv = Papa.unparse(csvData);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'pdf_contents.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    </script>
+</body>
+</html>
