@@ -1,4 +1,4 @@
-[https://bit.ly/ai-tricks-soma](bit.ly/ai-tricks-soma)
+[bit.ly/ai-tricks-soma](https://bit.ly/ai-tricks-soma)
 
 # Fun little AI tricks for non-developers
 
