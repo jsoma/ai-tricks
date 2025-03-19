@@ -22,6 +22,7 @@ Lots of ways things can go wrong, but lots of ways things can make your life eas
 
 - [NotebookLM](https://notebooklm.google/), for doing RAG in the cloud
 - [Msty.app](https://msty.app/), for doing RAG locally (...when it works)
+- [NYC’s AI Chatbot Tells Businesses to Break the Law](https://themarkup.org/news/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law), a cautionary tale
 
 ## Many documents, many answers
 
