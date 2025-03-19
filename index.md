@@ -30,6 +30,8 @@ Lots of ways things can go wrong, but lots of ways things can make your life eas
 
 ## Other tools
 
+[MacWhisper](https://goodsnooze.gumroad.com/l/macwhisper) (and... maybe [EasyWhisper](https://easywhisper.io/)? I don't know Windows!) do a great job transcribing content from audio and videos.
+
 [Claude](https://claude.ai/) makes it really easy to make tiny baby apps. Just ask for what you want! [Here's an example](https://claude.ai/share/f8c825c1-e5f1-44e7-9770-e0fdc09a4ee0), or [see it live](claude-pdf-app.html).
 
 [Google Pinpoint](https://journaliststudio.google.com/pinpoint/about/) is a journalism-research-specific tool that does things like fancy fancy searching and structured data extraction. Here are some tutorials: [one](https://www.youtube.com/watch?v=Rqr6rker5V0), [two](https://www.youtube.com/watch?v=uBvoVox3XD0), [three](https://www.youtube.com/watch?v=wkaml3rA5ME) 
